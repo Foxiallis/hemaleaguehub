@@ -654,9 +654,10 @@
 
         // Multiple CORS proxies for fallback (in order of preference)
         const CORS_PROXIES = [
-            'https://api.allorigins.win/raw?url=',
-            'https://corsproxy.io/?',
-            'https://cors-anywhere.herokuapp.com/'
+            { url: 'https://api.codetabs.com/v1/proxy?quest=', encode: true },
+            { url: 'https://corsproxy.org/?', encode: true },
+            { url: 'https://proxy.cors.sh/', encode: false },
+            { url: 'https://api.allorigins.win/raw?url=', encode: true }
         ];
 
         const METRIC_DESCRIPTIONS = {
@@ -768,13 +769,30 @@
         // ==================== DATA FETCHING ====================
         const fetchSheetData = async (sheetName) => {
             const gid = SHEET_CONFIG[sheetName];
-            const baseUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
 
-            // Try each CORS proxy until one works
+            // Method 1: Try direct Google Sheets published CSV URL (requires sheet to be published to web)
+            // File > Share > Publish to web > Select sheet > CSV
+            const publishedUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
+
+            try {
+                const response = await fetch(publishedUrl);
+                if (response.ok) {
+                    const text = await response.text();
+                    if (!text.includes('<!DOCTYPE html>') && !text.includes('<html') && text.trim().length > 0) {
+                        return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+                    }
+                }
+            } catch (e) {
+                console.log('Direct fetch failed, trying CORS proxies...');
+            }
+
+            // Method 2: Try CORS proxies as fallback
+            const exportUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
             let lastError = null;
+
             for (const proxy of CORS_PROXIES) {
                 try {
-                    const url = proxy + encodeURIComponent(baseUrl);
+                    const url = proxy.encode ? proxy.url + encodeURIComponent(exportUrl) : proxy.url + exportUrl;
                     const response = await fetch(url, {
                         headers: {
                             'Accept': 'text/csv,text/plain,*/*'
@@ -795,7 +813,7 @@
                     continue;
                 }
             }
-            throw new Error(`Nie udało się pobrać ${sheetName}. ${lastError?.message || 'Sprawdź czy arkusz jest opublikowany.'}`);
+            throw new Error(`Nie udało się pobrać ${sheetName}. ${lastError?.message || 'Sprawdź czy arkusz jest opublikowany do sieci (Plik > Udostępnij > Opublikuj w internecie).'}`);
         };
 
         // ==================== ANALYTICS ====================
