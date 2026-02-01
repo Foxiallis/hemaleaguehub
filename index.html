@@ -655,9 +655,7 @@
         // Multiple CORS proxies for fallback (in order of preference)
         const CORS_PROXIES = [
             { url: 'https://api.codetabs.com/v1/proxy?quest=', encode: true },
-            { url: 'https://corsproxy.org/?', encode: true },
-            { url: 'https://proxy.cors.sh/', encode: false },
-            { url: 'https://api.allorigins.win/raw?url=', encode: true }
+            { url: 'https://corsproxy.org/?', encode: true }
         ];
 
         const METRIC_DESCRIPTIONS = {
@@ -837,42 +835,14 @@
         const fetchSheetData = async (sheetName) => {
             const gid = SHEET_CONFIG[sheetName];
 
-            // Method 1: Try direct Google Sheets published CSV URL (requires sheet to be published to web)
-            // File > Share > Publish to web > Select sheet > CSV
-            const publishedUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
-
-            try {
-                const response = await fetch(publishedUrl);
-                if (response.ok) {
-                    const text = await response.text();
-                    if (!text.includes('<!DOCTYPE html>') && !text.includes('<html') && text.trim().length > 0) {
-                        const parsed = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
-                        // Debug: log raw column names before normalization
-                        if (parsed.length > 0) {
-                            console.log(`[${sheetName}] RAW Columns:`, Object.keys(parsed[0]));
-                            console.log(`[${sheetName}] RAW Sample:`, parsed[0]);
-                        }
-                        const normalized = normalizeData(parsed);
-                        // Debug: log normalized column names
-                        if (normalized.length > 0) {
-                            console.log(`[${sheetName}] NORMALIZED Columns:`, Object.keys(normalized[0]));
-                            console.log(`[${sheetName}] NORMALIZED Sample:`, normalized[0]);
-                            console.log(`[${sheetName}] double_hits value:`, normalized[0].double_hits, 'type:', typeof normalized[0].double_hits);
-                        }
-                        return normalized;
-                    }
-                }
-            } catch (e) {
-                console.log('Direct fetch failed, trying CORS proxies...', e);
-            }
-
-            // Method 2: Try CORS proxies as fallback
+            // Try CORS proxies
             const exportUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
             let lastError = null;
 
             for (const proxy of CORS_PROXIES) {
                 try {
                     const url = proxy.encode ? proxy.url + encodeURIComponent(exportUrl) : proxy.url + exportUrl;
+                    console.log(`[${sheetName}] Trying proxy:`, proxy.url);
                     const response = await fetch(url, {
                         headers: {
                             'Accept': 'text/csv,text/plain,*/*'
@@ -880,17 +850,24 @@
                     });
                     if (!response.ok) {
                         lastError = new Error(`HTTP ${response.status}`);
+                        console.log(`[${sheetName}] Proxy failed:`, response.status);
                         continue;
                     }
                     const text = await response.text();
                     if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
                         lastError = new Error('Otrzymano HTML zamiast CSV');
+                        console.log(`[${sheetName}] Proxy returned HTML instead of CSV`);
                         continue;
                     }
                     const parsed = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+                    console.log(`[${sheetName}] SUCCESS via proxy. Columns:`, parsed.length > 0 ? Object.keys(parsed[0]) : 'empty');
+                    if (parsed.length > 0) {
+                        console.log(`[${sheetName}] Sample row:`, parsed[0]);
+                    }
                     return normalizeData(parsed);
                 } catch (err) {
                     lastError = err;
+                    console.log(`[${sheetName}] Proxy error:`, err.message);
                     continue;
                 }
             }
