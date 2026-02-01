@@ -144,9 +144,29 @@
         }
 
         .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            -ms-flex-wrap: wrap;
+            flex-wrap: wrap;
             gap: 16px;
+        }
+
+        .stats-grid > * {
+            -webkit-box-flex: 1;
+            -ms-flex: 1 1 150px;
+            flex: 1 1 150px;
+            min-width: 150px;
+        }
+
+        @supports (display: grid) {
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+            .stats-grid > * {
+                min-width: auto;
+            }
         }
 
         .stat-item {
@@ -232,15 +252,34 @@
         }
 
         select, input {
+            background: #0f0f0f;
             background: var(--bg-dark);
+            border: 1px solid #2a2a2a;
             border: 1px solid var(--border);
+            color: #e8e8e8;
             color: var(--text-primary);
             padding: 10px 14px;
             font-family: 'Source Sans 3', sans-serif;
             font-size: 0.9rem;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            border-radius: 0;
         }
 
-        select:focus, input:focus { outline: none; border-color: var(--accent-gold-dim); }
+        /* Custom dropdown arrow for better cross-browser support */
+        select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #8b7019;
+            border-color: var(--accent-gold-dim);
+        }
 
         label {
             color: var(--text-secondary);
@@ -305,10 +344,32 @@
         .matchup-context { margin-left: auto; font-size: 0.8rem; color: var(--text-secondary); }
 
         .fencer-checkbox-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            -ms-flex-wrap: wrap;
+            flex-wrap: wrap;
             gap: 8px;
             margin-bottom: 20px;
+        }
+
+        .fencer-checkbox-grid > * {
+            -webkit-box-flex: 1;
+            -ms-flex: 1 1 220px;
+            flex: 1 1 220px;
+            min-width: 220px;
+            max-width: 100%;
+        }
+
+        @supports (display: grid) {
+            .fencer-checkbox-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            }
+            .fencer-checkbox-grid > * {
+                min-width: auto;
+                max-width: none;
+            }
         }
 
         .fencer-checkbox {
@@ -383,7 +444,8 @@
         }
 
         .active-badge.active { background: rgba(74, 159, 74, 0.2); color: var(--success); border: 1px solid var(--success); }
-        .active-badge.inactive { background: rgba(159, 74, 74, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+        .active-badge.inactive { background: rgba(136, 136, 136, 0.2); color: var(--text-secondary); border: 1px solid var(--text-secondary); }
+        .active-badge.banned { background: rgba(159, 74, 74, 0.2); color: var(--danger); border: 1px solid var(--danger); }
 
         .chart-container { height: 300px; position: relative; margin: 20px 0; }
         .chart-svg { width: 100%; height: 100%; }
@@ -476,19 +538,62 @@
         .rating-down { color: var(--danger); }
 
         .two-column-layout {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            -ms-flex-wrap: wrap;
+            flex-wrap: wrap;
             gap: 20px;
-            align-items: start;
+            -webkit-box-align: start;
+            -ms-flex-align: start;
+            align-items: flex-start;
+        }
+
+        .two-column-layout > * {
+            -webkit-box-flex: 1;
+            -ms-flex: 1 1 400px;
+            flex: 1 1 400px;
+            min-width: 300px;
+        }
+
+        @supports (display: grid) {
+            .two-column-layout {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+            .two-column-layout > * {
+                min-width: auto;
+            }
         }
 
         .metric-legend {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            -ms-flex-wrap: wrap;
+            flex-wrap: wrap;
             gap: 12px;
             margin-top: 16px;
             padding-top: 16px;
+            border-top: 1px solid #2a2a2a;
             border-top: 1px solid var(--border);
+        }
+
+        .metric-legend > * {
+            -webkit-box-flex: 1;
+            -ms-flex: 1 1 200px;
+            flex: 1 1 200px;
+            min-width: 200px;
+        }
+
+        @supports (display: grid) {
+            .metric-legend {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            .metric-legend > * {
+                min-width: auto;
+            }
         }
 
         .metric-legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
@@ -547,7 +652,12 @@
             'Fights_Saber': 986988196
         };
 
-        const CORS_PROXY = 'https://corsproxy.io/?';
+        // Multiple CORS proxies for fallback (in order of preference)
+        const CORS_PROXIES = [
+            'https://api.allorigins.win/raw?url=',
+            'https://corsproxy.io/?',
+            'https://cors-anywhere.herokuapp.com/'
+        ];
 
         const METRIC_DESCRIPTIONS = {
             'EFF': 'Wygrywaj więcej',
@@ -659,12 +769,33 @@
         const fetchSheetData = async (sheetName) => {
             const gid = SHEET_CONFIG[sheetName];
             const baseUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
-            const url = CORS_PROXY + encodeURIComponent(baseUrl);
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`Nie udało się pobrać ${sheetName}: HTTP ${response.status}`);
-            const text = await response.text();
-            if (text.includes('<!DOCTYPE html>')) throw new Error(`Arkusz "${sheetName}" zwrócił HTML. Opublikuj arkusz.`);
-            return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+
+            // Try each CORS proxy until one works
+            let lastError = null;
+            for (const proxy of CORS_PROXIES) {
+                try {
+                    const url = proxy + encodeURIComponent(baseUrl);
+                    const response = await fetch(url, {
+                        headers: {
+                            'Accept': 'text/csv,text/plain,*/*'
+                        }
+                    });
+                    if (!response.ok) {
+                        lastError = new Error(`HTTP ${response.status}`);
+                        continue;
+                    }
+                    const text = await response.text();
+                    if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+                        lastError = new Error('Otrzymano HTML zamiast CSV');
+                        continue;
+                    }
+                    return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+                } catch (err) {
+                    lastError = err;
+                    continue;
+                }
+            }
+            throw new Error(`Nie udało się pobrać ${sheetName}. ${lastError?.message || 'Sprawdź czy arkusz jest opublikowany.'}`);
         };
 
         // ==================== ANALYTICS ====================
@@ -818,6 +949,26 @@
             return fencers.filter(f => fights.some(fight => fight.winner === f.name || fight.loser === f.name))
                 .map(f => ({ ...calculateFencerStats(f.name, fights, 'all'), rating: ratings[f.name]?.rating || GLICKO2.INITIAL_RATING, rd: ratings[f.name]?.rd || GLICKO2.INITIAL_RD }))
                 .filter(s => s.fights > 0).sort((a, b) => b.rating - a.rating);
+        };
+
+        // ==================== FENCER STATUS ====================
+        const getFencerStatus = (fencerName, fencerData, fights, allTournaments) => {
+            // Get the most recent tournament (last in sorted order)
+            const mostRecentTournament = allTournaments.length > 0 ? allTournaments[allTournaments.length - 1] : null;
+
+            // Check if banned (ban column contains the most recent tournament name)
+            if (fencerData?.ban && mostRecentTournament && fencerData.ban.trim() === mostRecentTournament) {
+                return 'banned';
+            }
+
+            // Get last 3 tournaments
+            const last3Tournaments = allTournaments.slice(-3);
+
+            // Check if fencer participated in any of the last 3 tournaments
+            const fencerFights = fights.filter(f => f.winner === fencerName || f.loser === fencerName);
+            const participatedInRecent = fencerFights.some(f => last3Tournaments.includes(f.tournament));
+
+            return participatedInRecent ? 'active' : 'inactive';
         };
 
         // ==================== MATCHUP GENERATION ====================
@@ -1055,15 +1206,19 @@
             );
         };
 
-        const RankingsTable = ({ fights, fencers, ratings, tournamentFilter }) => {
+        const RankingsTable = ({ fights, fencers, ratings, tournamentFilter, tournaments }) => {
             const [sortBy, setSortBy] = useState('rating');
             const [sortDir, setSortDir] = useState('desc');
+            const sortedTournaments = useMemo(() => [...(tournaments || [])].sort(), [tournaments]);
 
             const stats = useMemo(() => {
-                return fencers.filter(f => f.active === 'TRUE' || fights.some(fight => fight.winner === f.name || fight.loser === f.name))
+                return fencers.filter(f => {
+                    const status = getFencerStatus(f.name, f, fights, sortedTournaments);
+                    return status === 'active' || fights.some(fight => fight.winner === f.name || fight.loser === f.name);
+                })
                     .map(f => ({ ...calculateFencerStats(f.name, fights, tournamentFilter), rating: ratings[f.name]?.rating || GLICKO2.INITIAL_RATING, rd: ratings[f.name]?.rd || GLICKO2.INITIAL_RD }))
                     .filter(s => s.fights > 0);
-            }, [fights, fencers, ratings, tournamentFilter]);
+            }, [fights, fencers, ratings, tournamentFilter, sortedTournaments]);
 
             const sorted = useMemo(() => [...stats].sort((a, b) => sortDir === 'desc' ? b[sortBy] - a[sortBy] : a[sortBy] - b[sortBy]), [stats, sortBy, sortDir]);
 
@@ -1301,17 +1456,18 @@
             );
         };
 
-        const PersonalStatsPage = ({ fights, fencers, ratings, fightDetails }) => {
+        const PersonalStatsPage = ({ fights, fencers, ratings, fightDetails, tournaments }) => {
             const [selectedFencer, setSelectedFencer] = useState('');
             const activeFencers = useMemo(() => fencers.filter(f => fights.some(fight => fight.winner === f.name || fight.loser === f.name)).map(f => f.name).sort(), [fencers, fights]);
             const rankings = useMemo(() => getRankings(fights, fencers, ratings), [fights, fencers, ratings]);
+            const sortedTournaments = useMemo(() => [...tournaments].sort(), [tournaments]);
 
             useEffect(() => { if (activeFencers.length > 0 && !selectedFencer) setSelectedFencer(activeFencers[0]); }, [activeFencers]);
 
             const stats = selectedFencer ? calculateFencerStats(selectedFencer, fights, 'all') : null;
             const fencerRating = ratings[selectedFencer];
             const fencerData = fencers.find(f => f.name === selectedFencer);
-            const isActive = fencerData?.active === 'TRUE';
+            const fencerStatus = getFencerStatus(selectedFencer, fencerData, fights, sortedTournaments);
             const rank = rankings.findIndex(r => r.fencer === selectedFencer) + 1;
             const getRankDisplay = () => {
                 if (rank === 1) return { text: '🥇 1.', className: 'rank-1' };
@@ -1336,7 +1492,9 @@
                         <>
                             <div className="personal-header">
                                 <div className="personal-name">{selectedFencer}</div>
-                                <span className={`active-badge ${isActive ? 'active' : 'inactive'}`}>{isActive ? 'Aktywny' : 'Nieaktywny'}</span>
+                                <span className={`active-badge ${fencerStatus}`}>
+                                    {fencerStatus === 'active' ? 'Aktywny' : fencerStatus === 'banned' ? 'Zbanowany' : 'Nieaktywny'}
+                                </span>
                                 <div className="personal-rating">{Math.round(fencerRating?.rating || 1500)}<span> ±{Math.round(fencerRating?.rd || 350)} Rating</span></div>
                                 <div className={`personal-rank ${rankDisplay.className}`}>{rankDisplay.text}</div>
                             </div>
@@ -1376,17 +1534,22 @@
                     </div>
                 </div>
                 <StatsGrid fights={fights} tournamentFilter={tournamentFilter} />
-                <RankingsTable fights={fights} fencers={fencers} ratings={ratings} tournamentFilter={tournamentFilter} />
+                <RankingsTable fights={fights} fencers={fencers} ratings={ratings} tournamentFilter={tournamentFilter} tournaments={tournaments} />
                 {tournamentFilter !== 'all' && (
                     <TournamentFightsTable fightDetails={fightDetails} tournamentFilter={tournamentFilter} />
                 )}
             </div>
         );
 
-        const MatchupGeneratorPage = ({ fights, fencers }) => {
+        const MatchupGeneratorPage = ({ fights, fencers, tournaments }) => {
             const [selectedFencers, setSelectedFencers] = useState([]);
             const [generatedMatchups, setGeneratedMatchups] = useState([]);
-            const activeFencers = useMemo(() => fencers.filter(f => f.active === 'TRUE').map(f => f.name).sort(), [fencers]);
+            const sortedTournaments = useMemo(() => [...tournaments].sort(), [tournaments]);
+            // Show fencers who are active (participated in last 3 tournaments) and not banned
+            const activeFencers = useMemo(() => fencers.filter(f => {
+                const status = getFencerStatus(f.name, f, fights, sortedTournaments);
+                return status === 'active';
+            }).map(f => f.name).sort(), [fencers, fights, sortedTournaments]);
 
             const getLastTournament = (fencer) => {
                 const fencerFights = fights.filter(f => f.winner === fencer || f.loser === fencer);
@@ -1441,12 +1604,12 @@
             );
         };
 
-        const DashboardPage = ({ fights, fencers, ratings }) => (
+        const DashboardPage = ({ fights, fencers, ratings, tournaments }) => (
             <div>
                 <StatsGrid fights={fights} tournamentFilter="all" />
                 <div className="two-column-layout">
                     <RecentFights fights={fights} />
-                    <RankingsTable fights={fights} fencers={fencers} ratings={ratings} tournamentFilter="all" />
+                    <RankingsTable fights={fights} fencers={fencers} ratings={ratings} tournamentFilter="all" tournaments={tournaments} />
                 </div>
             </div>
         );
@@ -1493,10 +1656,10 @@
                         <button className={`weapon-btn ${weapon === 'saber' ? 'active' : ''}`} onClick={() => setWeapon('saber')}>🗡 Szabla</button>
                     </div>
 
-                    {activeTab === 'dashboard' && <DashboardPage fights={fights} fencers={fencers} ratings={ratings} />}
+                    {activeTab === 'dashboard' && <DashboardPage fights={fights} fencers={fencers} ratings={ratings} tournaments={tournaments} />}
                     {activeTab === 'tournaments' && <TournamentPage fights={fights} fencers={fencers} ratings={ratings} fightDetails={fightDetails} tournamentFilter={tournamentFilter} setTournamentFilter={setTournamentFilter} tournaments={tournaments} />}
-                    {activeTab === 'personal' && <PersonalStatsPage fights={fights} fencers={fencers} ratings={ratings} fightDetails={fightDetails} />}
-                    {activeTab === 'matchups' && <MatchupGeneratorPage fights={fights} fencers={fencers} />}
+                    {activeTab === 'personal' && <PersonalStatsPage fights={fights} fencers={fencers} ratings={ratings} fightDetails={fightDetails} tournaments={tournaments} />}
+                    {activeTab === 'matchups' && <MatchupGeneratorPage fights={fights} fencers={fencers} tournaments={tournaments} />}
 
                     <footer style={{ textAlign: 'center', padding: '40px 20px', marginTop: 40, borderTop: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                         <p>Źródło danych: <a href={`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}`} target="_blank" style={{ color: 'var(--accent-gold-dim)' }}>Google Sheets</a></p>
