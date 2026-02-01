@@ -767,6 +767,73 @@
         };
 
         // ==================== DATA FETCHING ====================
+        // Normalize column names to handle differences between local and web fetching
+        const normalizeData = (data) => {
+            if (!data || data.length === 0) return data;
+
+            // Map of possible column name variations to standard names
+            const columnMappings = {
+                'tournament': ['tournament', 'Tournament', 'turniej', 'Turniej'],
+                'winner': ['winner', 'Winner', 'zwyciezca', 'Zwyciezca', 'zwycięzca', 'Zwycięzca'],
+                'loser': ['loser', 'Loser', 'przegrany', 'Przegrany'],
+                'winner_points': ['winner_points', 'Winner_points', 'winner_Points', 'Winner_Points', 'winnerpoints', 'WinnerPoints'],
+                'loser_points': ['loser_points', 'Loser_points', 'loser_Points', 'Loser_Points', 'loserpoints', 'LoserPoints'],
+                'double_hits': ['double_hits', 'Double_hits', 'double_Hits', 'Double_Hits', 'doublehits', 'DoubleHits', 'doubles', 'Doubles', 'duble', 'Duble'],
+                'name': ['name', 'Name', 'imie', 'Imie', 'imię', 'Imię', 'nazwisko', 'Nazwisko'],
+                'ban': ['ban', 'Ban', 'BAN', 'banned', 'Banned'],
+                'timestamp': ['timestamp', 'Timestamp', 'czas', 'Czas', 'data', 'Data']
+            };
+
+            // Helper to clean a key (remove quotes, trim whitespace)
+            const cleanKey = (k) => k.replace(/^["']|["']$/g, '').trim().toLowerCase();
+
+            return data.map(row => {
+                const normalizedRow = {};
+                const rowKeys = Object.keys(row);
+
+                // For each standard column name, find the matching key in the row
+                for (const [standardName, variations] of Object.entries(columnMappings)) {
+                    for (const variation of variations) {
+                        const variationClean = variation.toLowerCase();
+                        // Check for exact match, trimmed match, or cleaned match (without quotes)
+                        const foundKey = rowKeys.find(k =>
+                            k === variation ||
+                            k.trim() === variation ||
+                            k.toLowerCase() === variationClean ||
+                            k.trim().toLowerCase() === variationClean ||
+                            cleanKey(k) === variationClean
+                        );
+                        if (foundKey && row[foundKey] !== undefined) {
+                            // Also clean the value (remove surrounding quotes if present)
+                            let value = row[foundKey];
+                            if (typeof value === 'string') {
+                                value = value.replace(/^["']|["']$/g, '').trim();
+                            }
+                            normalizedRow[standardName] = value;
+                            break;
+                        }
+                    }
+                }
+
+                // Also copy any other columns that weren't mapped
+                for (const key of rowKeys) {
+                    const cleanedKey = cleanKey(key);
+                    const standardKey = Object.keys(columnMappings).find(std =>
+                        columnMappings[std].some(v => v.toLowerCase() === cleanedKey)
+                    );
+                    if (!standardKey && !normalizedRow[key] && !normalizedRow[cleanedKey]) {
+                        let value = row[key];
+                        if (typeof value === 'string') {
+                            value = value.replace(/^["']|["']$/g, '').trim();
+                        }
+                        normalizedRow[key.trim()] = value;
+                    }
+                }
+
+                return normalizedRow;
+            });
+        };
+
         const fetchSheetData = async (sheetName) => {
             const gid = SHEET_CONFIG[sheetName];
 
@@ -779,11 +846,24 @@
                 if (response.ok) {
                     const text = await response.text();
                     if (!text.includes('<!DOCTYPE html>') && !text.includes('<html') && text.trim().length > 0) {
-                        return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+                        const parsed = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+                        // Debug: log raw column names before normalization
+                        if (parsed.length > 0) {
+                            console.log(`[${sheetName}] RAW Columns:`, Object.keys(parsed[0]));
+                            console.log(`[${sheetName}] RAW Sample:`, parsed[0]);
+                        }
+                        const normalized = normalizeData(parsed);
+                        // Debug: log normalized column names
+                        if (normalized.length > 0) {
+                            console.log(`[${sheetName}] NORMALIZED Columns:`, Object.keys(normalized[0]));
+                            console.log(`[${sheetName}] NORMALIZED Sample:`, normalized[0]);
+                            console.log(`[${sheetName}] double_hits value:`, normalized[0].double_hits, 'type:', typeof normalized[0].double_hits);
+                        }
+                        return normalized;
                     }
                 }
             } catch (e) {
-                console.log('Direct fetch failed, trying CORS proxies...');
+                console.log('Direct fetch failed, trying CORS proxies...', e);
             }
 
             // Method 2: Try CORS proxies as fallback
@@ -807,7 +887,8 @@
                         lastError = new Error('Otrzymano HTML zamiast CSV');
                         continue;
                     }
-                    return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+                    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+                    return normalizeData(parsed);
                 } catch (err) {
                     lastError = err;
                     continue;
