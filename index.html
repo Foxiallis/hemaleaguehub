@@ -342,6 +342,10 @@
         .matchup-number { width: 30px; color: var(--text-muted); font-weight: 600; }
         .matchup-vs { color: var(--accent-gold); margin: 0 12px; font-weight: 600; }
         .matchup-context { margin-left: auto; font-size: 0.8rem; color: var(--text-secondary); }
+        .matchup-toggle { margin-left: 16px; width: 20px; text-align: center; color: var(--text-muted); font-size: 1rem; flex-shrink: 0; }
+        .matchup-done { opacity: 0.45; }
+        .matchup-done .matchup-toggle { color: var(--accent-gold); }
+        .matchup-item:hover { border-color: var(--accent-gold-dim); }
 
         .fencer-checkbox-grid {
             display: -webkit-box;
@@ -1534,7 +1538,7 @@
 
         const PersonalStatsPage = ({ fights, fencers, ratings, fightDetails, tournaments }) => {
             const [selectedFencer, setSelectedFencer] = useState('');
-            const activeFencers = useMemo(() => fencers.filter(f => fights.some(fight => fight.winner === f.name || fight.loser === f.name)).map(f => f.name).sort(), [fencers, fights]);
+            const activeFencers = useMemo(() => fencers.map(f => f.name).filter(Boolean).sort(), [fencers]);
             const rankings = useMemo(() => getRankings(fights, fencers, ratings), [fights, fencers, ratings]);
             const sortedTournaments = useMemo(() => [...tournaments].sort(), [tournaments]);
 
@@ -1620,12 +1624,13 @@
         const MatchupGeneratorPage = ({ fights, fencers, tournaments }) => {
             const [selectedFencers, setSelectedFencers] = useState([]);
             const [generatedMatchups, setGeneratedMatchups] = useState([]);
+            const [completedMatchups, setCompletedMatchups] = useState(new Set());
             const sortedTournaments = useMemo(() => [...tournaments].sort(), [tournaments]);
-            // Show fencers who are active (participated in last 3 tournaments) and not banned
+            // Show fencers from the Fencers table: not banned in most recent tournament, and active in last 3
             const activeFencers = useMemo(() => fencers.filter(f => {
                 const status = getFencerStatus(f.name, f, fights, sortedTournaments);
                 return status === 'active';
-            }).map(f => f.name).sort(), [fencers, fights, sortedTournaments]);
+            }).map(f => f.name).filter(Boolean).sort(), [fencers, fights, sortedTournaments]);
 
             const getLastTournament = (fencer) => {
                 const fencerFights = fights.filter(f => f.winner === fencer || f.loser === fencer);
@@ -1636,7 +1641,8 @@
             const toggleFencer = (fencer) => { setSelectedFencers(prev => prev.includes(fencer) ? prev.filter(f => f !== fencer) : [...prev, fencer]); setGeneratedMatchups([]); };
             const selectAll = () => { setSelectedFencers([...activeFencers]); setGeneratedMatchups([]); };
             const selectNone = () => { setSelectedFencers([]); setGeneratedMatchups([]); };
-            const generate = () => { if (selectedFencers.length < 2) { alert('Wybierz co najmniej 2 zawodników'); return; } setGeneratedMatchups(generateMatchups(selectedFencers, fights)); };
+            const toggleMatchupDone = (i) => { setCompletedMatchups(prev => { const next = new Set(prev); if (next.has(i)) next.delete(i); else next.add(i); return next; }); };
+            const generate = () => { if (selectedFencers.length < 2) { alert('Wybierz co najmniej 2 zawodników'); return; } setGeneratedMatchups(generateMatchups(selectedFencers, fights)); setCompletedMatchups(new Set()); };
             const copyToClipboard = () => { navigator.clipboard.writeText(generatedMatchups.map((m, i) => `${i + 1}. ${m.fencers[0]} vs ${m.fencers[1]}`).join('\n')); };
 
             return (
@@ -1665,12 +1671,13 @@
                             <div className="card-title"><span>Wylosowane Walki ({generatedMatchups.length})</span><button className="btn btn-secondary" onClick={copyToClipboard} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>Kopiuj</button></div>
                             <div className="matchup-list">
                                 {generatedMatchups.map((matchup, i) => (
-                                    <div key={i} className="matchup-item">
+                                    <div key={i} className={`matchup-item${completedMatchups.has(i) ? ' matchup-done' : ''}`} onClick={() => toggleMatchupDone(i)} style={{ cursor: 'pointer' }}>
                                         <span className="matchup-number">{i + 1}.</span>
                                         <span>{matchup.fencers[0]}</span>
                                         <span className="matchup-vs">vs</span>
                                         <span>{matchup.fencers[1]}</span>
                                         <span className="matchup-context">{matchup.context}</span>
+                                        <span className="matchup-toggle">{completedMatchups.has(i) ? '✓' : '○'}</span>
                                     </div>
                                 ))}
                             </div>
