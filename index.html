@@ -1046,6 +1046,10 @@
 
             // Check if fencer participated in any of the last 3 tournaments
             const fencerFights = fights.filter(f => f.winner === fencerName || f.loser === fencerName);
+
+            // Fencers with no fights at all are considered new/active by default
+            if (fencerFights.length === 0) return 'active';
+
             const participatedInRecent = fencerFights.some(f => last3Tournaments.includes(f.tournament));
 
             return participatedInRecent ? 'active' : 'inactive';
@@ -1626,10 +1630,10 @@
             const [generatedMatchups, setGeneratedMatchups] = useState([]);
             const [completedMatchups, setCompletedMatchups] = useState(new Set());
             const sortedTournaments = useMemo(() => [...tournaments].sort(), [tournaments]);
-            // Show fencers from the Fencers table: not banned in most recent tournament, and active in last 3
+            // Show all non-banned fencers (active and inactive) for matchup generation
             const activeFencers = useMemo(() => fencers.filter(f => {
                 const status = getFencerStatus(f.name, f, fights, sortedTournaments);
-                return status === 'active';
+                return status !== 'banned';
             }).map(f => f.name).filter(Boolean).sort(), [fencers, fights, sortedTournaments]);
 
             const getLastTournament = (fencer) => {
