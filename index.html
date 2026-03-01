@@ -1056,46 +1056,77 @@
         };
 
         // ==================== MATCHUP GENERATION ====================
-        const generateMatchups = (attendingFencers, fights) => {
-            const n = attendingFencers.length;
-            if (n <= 6) {
-                const matchups = [];
-                for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) matchups.push([attendingFencers[i], attendingFencers[j]]);
-                return optimizeMatchupOrder(matchups, fights);
-            }
+const generateMatchups = (attendingFencers, fights) => {
+    const n = attendingFencers.length;
+    if (n <= 6) {
+        const matchups = [];
+        for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) matchups.push([attendingFencers[i], attendingFencers[j]]);
+        return optimizeMatchupOrder(matchups, fights);
+    }
 
-            const fightsPerFencer = n % 2 === 0 ? 5 : 6;
-            const recentFights = {};
-            const lastNTournaments = [...new Set(fights.map(f => f.tournament))].sort().slice(-5);
-            fights.filter(f => lastNTournaments.includes(f.tournament)).forEach(fight => {
-                const key = [fight.winner, fight.loser].sort().join('|');
-                recentFights[key] = (recentFights[key] || 0) + 1;
-            });
+    const fightsPerFencer = n % 2 === 0 ? 5 : 6;
+    const recentFights = {};
+    const lastNTournaments = [...new Set(fights.map(f => f.tournament))].sort().slice(-5);
+    fights.filter(f => lastNTournaments.includes(f.tournament)).forEach(fight => {
+        const key = [fight.winner, fight.loser].sort().join('|');
+        recentFights[key] = (recentFights[key] || 0) + 1;
+    });
 
-            const possibleMatchups = [];
-            for (let i = 0; i < n; i++) {
-                for (let j = i + 1; j < n; j++) {
-                    const key = [attendingFencers[i], attendingFencers[j]].sort().join('|');
-                    possibleMatchups.push({ fencers: [attendingFencers[i], attendingFencers[j]], priority: 100 - (recentFights[key] || 0) * 20 });
+    let bestMatchups = null;
+    let bestTotal = -Infinity;
+
+    for (let attempt = 0; attempt < 50; attempt++) {
+        // Fisher-Yates shuffle
+        const shuffled = attendingFencers.slice();
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        // Build circulant graph: connect each vertex to its k nearest
+        // neighbors on a circle, guaranteeing exactly fightsPerFencer per vertex
+        const half = Math.floor(fightsPerFencer / 2);
+        const seen = {};
+        const tryMatchups = [];
+
+        for (let i = 0; i < n; i++) {
+            for (let d = 1; d <= half; d++) {
+                const j = (i + d) % n;
+                const a = Math.min(i, j);
+                const b = Math.max(i, j);
+                const edgeKey = a + '-' + b;
+                if (!seen[edgeKey]) {
+                    seen[edgeKey] = true;
+                    tryMatchups.push([shuffled[a], shuffled[b]]);
                 }
             }
-            possibleMatchups.sort((a, b) => b.priority - a.priority);
-
-            const selectedMatchups = [];
-            const fightCounts = {};
-            attendingFencers.forEach(f => fightCounts[f] = 0);
-
-            for (const matchup of possibleMatchups) {
-                const [f1, f2] = matchup.fencers;
-                if (fightCounts[f1] < fightsPerFencer && fightCounts[f2] < fightsPerFencer) {
-                    selectedMatchups.push(matchup.fencers);
-                    fightCounts[f1]++;
-                    fightCounts[f2]++;
+            if (fightsPerFencer % 2 === 1) {
+                const j = (i + Math.floor(n / 2)) % n;
+                const a = Math.min(i, j);
+                const b = Math.max(i, j);
+                const edgeKey = a + '-' + b;
+                if (!seen[edgeKey]) {
+                    seen[edgeKey] = true;
+                    tryMatchups.push([shuffled[a], shuffled[b]]);
                 }
-                if (attendingFencers.every(f => fightCounts[f] >= fightsPerFencer)) break;
             }
-            return optimizeMatchupOrder(selectedMatchups, fights);
-        };
+        }
+
+        // Score: prefer arrangements avoiding recent repeat matchups
+        let totalScore = 0;
+        for (const m of tryMatchups) {
+            const key = [m[0], m[1]].sort().join('|');
+            totalScore += 100 - (recentFights[key] || 0) * 20;
+        }
+
+        if (totalScore > bestTotal) {
+            bestTotal = totalScore;
+            bestMatchups = tryMatchups;
+        }
+    }
+
+    return optimizeMatchupOrder(bestMatchups, fights);
+};
 
         const optimizeMatchupOrder = (matchups, historicalFights) => {
             const ordered = [];
