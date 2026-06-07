@@ -659,7 +659,9 @@
         // Multiple CORS proxies for fallback (in order of preference)
         const CORS_PROXIES = [
             { url: 'https://api.codetabs.com/v1/proxy?quest=', encode: true },
-            { url: 'https://corsproxy.org/?', encode: true }
+            { url: 'https://api.allorigins.win/raw?url=', encode: true },
+            { url: 'https://test.cors.workers.dev/?', encode: false },
+            { url: 'https://cors-anywhere.herokuapp.com/', encode: false }
         ];
 
         const METRIC_DESCRIPTIONS = {
