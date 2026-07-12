@@ -658,7 +658,8 @@
 
         // Multiple CORS proxies for fallback (in order of preference)
         const CORS_PROXIES = [
-            { url: 'https://api.codetabs.com/v1/proxy?quest=', encode: true },
+            { url: '', encode: false},
+            { url: 'https://proxy.corsfix.com/?', encode: false },
             { url: 'https://api.allorigins.win/raw?url=', encode: true },
             { url: 'https://test.cors.workers.dev/?', encode: false },
             { url: 'https://cors-anywhere.herokuapp.com/', encode: false }
@@ -841,18 +842,20 @@
         const fetchSheetData = async (sheetName) => {
             const gid = SHEET_CONFIG[sheetName];
 
-            // Try CORS proxies
-            const exportUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
+            // The gviz endpoint serves CSV directly with proper CORS headers
+            // (the /export endpoint 307-redirects without CORS headers, which browsers block)
+            const exportUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}&headers=1`;
             let lastError = null;
 
             for (const proxy of CORS_PROXIES) {
                 try {
                     const url = proxy.encode ? proxy.url + encodeURIComponent(exportUrl) : proxy.url + exportUrl;
-                    console.log(`[${sheetName}] Trying proxy:`, proxy.url);
+                    console.log(`[${sheetName}] Trying proxy:`, url);
                     const response = await fetch(url, {
                         headers: {
-                            'Accept': 'text/csv,text/plain,*/*'
-                        }
+                            'Accept': 'text/csv,text/plain,*/*',
+                        },
+                        mode: "cors"
                     });
                     if (!response.ok) {
                         lastError = new Error(`HTTP ${response.status}`);
