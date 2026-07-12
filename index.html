@@ -226,6 +226,12 @@
         .rating-value { font-weight: 600; color: var(--accent-gold); }
         .rating-rd { font-size: 0.75rem; color: var(--text-muted); }
 
+        .metric-cell {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
         .metric-value {
             display: inline-block;
             width: 3.2em;
@@ -1391,7 +1397,7 @@ const generateMatchups = (attendingFencers, fights) => {
                                         <td>{s.fights}</td>
                                         <td>{s.wins}</td>
                                         <td>{s.losses}</td>
-                                        <td><span className="metric-value">{(s.effectiveness * 100).toFixed(0)}%</span><div className="metric-bar"><div className="metric-bar-fill" style={{ width: `${s.effectiveness * 100}%` }} /></div></td>
+                                        <td><div className="metric-cell"><span className="metric-value">{(s.effectiveness * 100).toFixed(0)}%</span><div className="metric-bar"><div className="metric-bar-fill" style={{ width: `${s.effectiveness * 100}%` }} /></div></div></td>
                                         <td>{s.reliability.toFixed(2)}</td>
                                         <td>{(s.providence * 100).toFixed(0)}%</td>
                                         <td>{(s.fierceness * 100).toFixed(0)}%</td>
@@ -1550,7 +1556,7 @@ const generateMatchups = (attendingFencers, fights) => {
                                         <td>{r.fights}</td>
                                         <td>{r.wins}</td>
                                         <td>{r.losses}</td>
-                                        <td><span className="metric-value">{(r.effectiveness * 100).toFixed(0)}%</span><div className="metric-bar"><div className="metric-bar-fill" style={{ width: `${r.effectiveness * 100}%` }} /></div></td>
+                                        <td><div className="metric-cell"><span className="metric-value">{(r.effectiveness * 100).toFixed(0)}%</span><div className="metric-bar"><div className="metric-bar-fill" style={{ width: `${r.effectiveness * 100}%` }} /></div></div></td>
                                         <td>{r.reliability.toFixed(2)}</td>
                                         <td>{(r.providence * 100).toFixed(0)}%</td>
                                         <td>{(r.fierceness * 100).toFixed(0)}%</td>
