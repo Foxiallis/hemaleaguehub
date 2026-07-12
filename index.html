@@ -680,6 +680,7 @@
             INITIAL_VOLATILITY: 0.06,
             TAU: 0.5,
             CONVERGENCE_TOLERANCE: 0.000001,
+            RATING_DECAY: 0.85,
 
             toGlicko2Scale: (rating) => (rating - 1500) / 173.7178,
             fromGlicko2Scale: (mu) => mu * 173.7178 + 1500,
@@ -862,7 +863,11 @@
                         console.log(`[${sheetName}] Proxy failed:`, response.status);
                         continue;
                     }
-                    const text = await response.text();
+                    let text = await response.text();
+                    // gviz pads every row with trailing empty quoted columns ("",""...),
+                    // and PapaParse's duplicate-header renaming corrupts the parse
+                    // (it can swallow the first data row into a header key) — strip them
+                    text = text.split('\n').map(line => line.replace(/(,"")+\r?$/, '')).join('\n');
                     if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
                         lastError = new Error('Otrzymano HTML zamiast CSV');
                         console.log(`[${sheetName}] Proxy returned HTML instead of CSV`);
@@ -966,12 +971,14 @@
                     ratings[fencer] = { ...newRating, history: [...ratings[fencer].history, { tournament, rating: newRating.rating, rd: newRating.rd, ratingChange }] };
                 });
 
-                // Decay RD for non-participants
+                // Decay for non-participants: RD grows (standard Glicko-2) and the
+                // rating itself drifts exponentially toward the 1500 baseline
                 Object.keys(ratings).forEach(fencer => {
                     if (!participants.has(fencer) && ratings[fencer].history.length > 0) {
                         const phi = GLICKO2.toGlicko2RD(ratings[fencer].rd);
                         const sigma = ratings[fencer].volatility;
                         ratings[fencer].rd = Math.min(GLICKO2.fromGlicko2RD(Math.sqrt(phi * phi + sigma * sigma)), 350);
+                        ratings[fencer].rating = GLICKO2.INITIAL_RATING + (ratings[fencer].rating - GLICKO2.INITIAL_RATING) * GLICKO2.RATING_DECAY;
                     }
                 });
             });
