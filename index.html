@@ -798,7 +798,7 @@
                 'loser_points': ['loser_points', 'Loser_points', 'loser_Points', 'Loser_Points', 'loserpoints', 'LoserPoints'],
                 'double_hits': ['double_hits', 'Double_hits', 'double_Hits', 'Double_Hits', 'doublehits', 'DoubleHits', 'doubles', 'Doubles', 'duble', 'Duble'],
                 'name': ['name', 'Name', 'imie', 'Imie', 'imię', 'Imię', 'nazwisko', 'Nazwisko'],
-                'ban': ['ban', 'Ban', 'BAN', 'banned', 'Banned'],
+                'notes': ['notes', 'Notes', 'NOTES', 'note', 'Note', 'uwagi', 'Uwagi'],
                 'timestamp': ['timestamp', 'Timestamp', 'czas', 'Czas', 'data', 'Data']
             };
 
@@ -1055,13 +1055,27 @@
                 .filter(s => s.fights > 0).sort((a, b) => b.rating - a.rating);
         };
 
+        // ==================== FENCER NOTES ====================
+        // Notes column holds "ban <tournament>" or "visit <tournament>", e.g. "ban 2026-06"
+        const parseFencerNote = (fencerData) => {
+            const match = String(fencerData?.notes || '').trim().match(/^(ban|visit)\s+(.+)$/i);
+            return match ? { type: match[1].toLowerCase(), tournament: match[2].trim() } : null;
+        };
+
+        // Returns the tournament a visitor is visiting, or null for regular fencers
+        const getVisitTournament = (fencerData) => {
+            const note = parseFencerNote(fencerData);
+            return note?.type === 'visit' ? note.tournament : null;
+        };
+
         // ==================== FENCER STATUS ====================
         const getFencerStatus = (fencerName, fencerData, fights, allTournaments) => {
             // Get the most recent tournament (last in sorted order)
             const mostRecentTournament = allTournaments.length > 0 ? allTournaments[allTournaments.length - 1] : null;
 
-            // Check if banned (ban column contains the most recent tournament name)
-            if (fencerData?.ban && mostRecentTournament && fencerData.ban.trim() === mostRecentTournament) {
+            // Check if banned (notes column says "ban <most recent tournament name>")
+            const note = parseFencerNote(fencerData);
+            if (note?.type === 'ban' && mostRecentTournament && note.tournament === mostRecentTournament) {
                 return 'banned';
             }
 
@@ -1352,6 +1366,9 @@ const generateMatchups = (attendingFencers, fights) => {
 
             const stats = useMemo(() => {
                 return fencers.filter(f => {
+                    // Visitors only show up in the scoreboard of the tournament they visited
+                    const visitTournament = getVisitTournament(f);
+                    if (visitTournament && visitTournament !== tournamentFilter) return false;
                     const status = getFencerStatus(f.name, f, fights, sortedTournaments);
                     return status === 'active' || fights.some(fight => fight.winner === f.name || fight.loser === f.name);
                 })
@@ -1597,8 +1614,10 @@ const generateMatchups = (attendingFencers, fights) => {
 
         const PersonalStatsPage = ({ fights, fencers, ratings, fightDetails, tournaments }) => {
             const [selectedFencer, setSelectedFencer] = useState('');
-            const activeFencers = useMemo(() => fencers.map(f => f.name).filter(Boolean).sort(), [fencers]);
-            const rankings = useMemo(() => getRankings(fights, fencers, ratings), [fights, fencers, ratings]);
+            // Visitors have no personal page and don't take up a place in the ranking
+            const regularFencers = useMemo(() => fencers.filter(f => !getVisitTournament(f)), [fencers]);
+            const activeFencers = useMemo(() => regularFencers.map(f => f.name).filter(Boolean).sort(), [regularFencers]);
+            const rankings = useMemo(() => getRankings(fights, regularFencers, ratings), [fights, regularFencers, ratings]);
             const sortedTournaments = useMemo(() => [...tournaments].sort(), [tournaments]);
 
             useEffect(() => { if (activeFencers.length > 0 && !selectedFencer) setSelectedFencer(activeFencers[0]); }, [activeFencers]);
@@ -1685,13 +1704,22 @@ const generateMatchups = (attendingFencers, fights) => {
             const [generatedMatchups, setGeneratedMatchups] = useState([]);
             const [completedMatchups, setCompletedMatchups] = useState(new Set());
             const sortedTournaments = useMemo(() => [...tournaments].sort(), [tournaments]);
+            const visitors = useMemo(() => new Set(fencers.filter(f => getVisitTournament(f)).map(f => f.name)), [fencers]);
             // Show all non-banned fencers (active and inactive) for matchup generation
             const activeFencers = useMemo(() => fencers.filter(f => {
+                // Visitors are only available until the tournament they visit has happened
+                // (i.e. no tournament with that name or a later one has fights yet)
+                const visitTournament = getVisitTournament(f);
+                if (visitTournament) {
+                    const mostRecentTournament = sortedTournaments[sortedTournaments.length - 1];
+                    return !mostRecentTournament || visitTournament > mostRecentTournament;
+                }
                 const status = getFencerStatus(f.name, f, fights, sortedTournaments);
                 return status !== 'banned';
             }).map(f => f.name).filter(Boolean).sort(), [fencers, fights, sortedTournaments]);
 
             const getLastTournament = (fencer) => {
+                if (visitors.has(fencer)) return 'GOŚĆ';
                 const fencerFights = fights.filter(f => f.winner === fencer || f.loser === fencer);
                 if (fencerFights.length === 0) return 'NOWY';
                 return fencerFights.map(f => f.tournament).sort().pop();
